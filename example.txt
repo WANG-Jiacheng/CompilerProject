@@ -9,3 +9,4 @@ int do_math(int a) {
 echo(do_math(11))
 echo(do_math(12))
 printi(10)
+printf("%d\n", do_math(11))

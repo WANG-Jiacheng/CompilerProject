@@ -130,3 +130,29 @@ public:
 		type(type), id(id), arguments(arguments), block(block) { }
 	virtual llvm::Value* codeGen(CodeGenContext& context);
 };
+
+class NIfStatement : public NStatement {
+public:
+    NExpression& condition;
+    NBlock& ifBlock;
+    NBlock* elseBlock; // 可选的else语句块，可以为NULL
+
+    NIfStatement(NExpression& condition, NBlock& ifBlock, NBlock* elseBlock = NULL)
+        : condition(condition), ifBlock(ifBlock), elseBlock(elseBlock) { }
+
+    virtual llvm::Value* codeGen(CodeGenContext& context);
+};
+
+class NChar : public NExpression {
+public:
+  NChar(std::string &value) : value(value) {}
+  virtual llvm::Value *codeGen(CodeGenContext& context);
+  std::string value;
+};
+
+class NString : public NExpression {
+public:
+  NString(std::string &value) : value(value) {}
+  virtual llvm::Value *codeGen(CodeGenContext &context);
+  std::string value;
+};

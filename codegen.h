@@ -24,6 +24,7 @@ using namespace llvm;
 class NBlock;
 
 static LLVMContext MyContext;
+static IRBuilder<> myBuilder(MyContext);
 
 class CodeGenBlock {
 public:

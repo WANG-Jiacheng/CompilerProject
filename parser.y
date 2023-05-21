@@ -20,17 +20,19 @@
 	std::vector<NExpression*> *exprvec;
 	std::string *string;
 	int token;
+
+	NIfStatement* if_stmt;
 }
 
 /* Define our terminal symbols (tokens). This should
    match our tokens.l lex file. We also define the node type
    they represent.
  */
-%token <string> TIDENTIFIER TINTEGER TDOUBLE
+%token <string> TIDENTIFIER TINTEGER TDOUBLE TCHAR TSTRING
 %token <token> TCEQ TCNE TCLT TCLE TCGT TCGE TEQUAL
 %token <token> TLPAREN TRPAREN TLBRACE TRBRACE TCOMMA TDOT
 %token <token> TPLUS TMINUS TMUL TDIV
-%token <token> TRETURN TEXTERN
+%token <token> TRETURN TEXTERN TIF TELSE
 
 /* Define the type of node our nonterminal symbols represent.
    The types refer to the %union declaration above. Ex: when
@@ -42,7 +44,7 @@
 %type <varvec> func_decl_args
 %type <exprvec> call_args
 %type <block> program stmts block
-%type <stmt> stmt var_decl func_decl extern_decl
+%type <stmt> stmt var_decl func_decl extern_decl if_stmt
 %type <token> comparison
 
 /* Operator precedence for mathematical operators */
@@ -60,7 +62,7 @@ stmts : stmt { $$ = new NBlock(); $$->statements.push_back($<stmt>1); }
 	  | stmts stmt { $1->statements.push_back($<stmt>2); }
 	  ;
 
-stmt : var_decl | func_decl | extern_decl
+stmt : var_decl | func_decl | extern_decl | if_stmt
 	 | expr { $$ = new NExpressionStatement(*$1); }
 	 | TRETURN expr { $$ = new NReturnStatement(*$2); }
      ;
@@ -91,6 +93,8 @@ ident : TIDENTIFIER { $$ = new NIdentifier(*$1); delete $1; }
 
 numeric : TINTEGER { $$ = new NInteger(atol($1->c_str())); delete $1; }
 		| TDOUBLE { $$ = new NDouble(atof($1->c_str())); delete $1; }
+		| TCHAR {$$ = new NChar(*$1); delete $1;}
+		| TSTRING {$$ = new NString(*$1); delete $1;}
 		;
 	
 expr : ident TEQUAL expr { $$ = new NAssignment(*$<ident>1, *$3); }
@@ -111,5 +115,9 @@ call_args : /*blank*/  { $$ = new ExpressionList(); }
 		  ;
 
 comparison : TCEQ | TCNE | TCLT | TCLE | TCGT | TCGE;
+
+if_stmt : TIF TLPAREN expr TRPAREN block { $$ = new NIfStatement(*$3, *$5); }
+        | TIF TLPAREN expr TRPAREN block TELSE block { $$ = new NIfStatement(*$3, *$5, $7); }
+		;
 
 %%

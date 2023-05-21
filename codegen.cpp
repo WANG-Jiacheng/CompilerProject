@@ -188,6 +188,8 @@ Value* NFunctionDeclaration::codeGen(CodeGenContext& context)
 	Function *function = Function::Create(ftype, GlobalValue::InternalLinkage, id.name.c_str(), context.module);
 	BasicBlock *bblock = BasicBlock::Create(MyContext, "entry", function, 0);
 
+	myBuilder.SetInsertPoint(bblock);
+	
 	context.pushBlock(bblock);
 
 	Function::arg_iterator argsValues = function->arg_begin();
@@ -205,6 +207,66 @@ Value* NFunctionDeclaration::codeGen(CodeGenContext& context)
 	ReturnInst::Create(MyContext, context.getCurrentReturnValue(), bblock);
 
 	context.popBlock();
+
+	myBuilder.SetInsertPoint(context.currentBlock());
 	std::cout << "Creating function: " << id.name << endl;
 	return function;
+}
+
+llvm::Value* NIfStatement::codeGen(CodeGenContext& context) {
+
+}
+
+llvm::Value* NChar::codeGen(CodeGenContext &context)
+{
+    cout << "CharNode : " << value <<endl;
+    if (this->value.size() == 3)
+        return myBuilder.getInt8(this->value.at(1));
+    else {
+        if (this->value.compare("'\\n'") == 0) {
+            return myBuilder.getInt8('\n');
+        } else if (this->value.compare("'\\\\'") == 0){
+            return myBuilder.getInt8('\\');
+        } else if (this->value.compare("'\\a'") == 0){
+            return myBuilder.getInt8('\a');
+        } else if (this->value.compare("'\\b'") == 0){
+            return myBuilder.getInt8('\b');
+        } else if (this->value.compare("'\\f'") == 0){
+            return myBuilder.getInt8('\f');
+        } else if (this->value.compare("'\\t'") == 0){
+            return myBuilder.getInt8('\t');
+        } else if (this->value.compare("'\\v'") == 0){
+            return myBuilder.getInt8('\v');
+        } else if (this->value.compare("'\\''") == 0){
+            return myBuilder.getInt8('\'');
+        } else if (this->value.compare("'\\\"'") == 0){
+            return myBuilder.getInt8('\"');
+        } else if (this->value.compare("'\\0'") == 0){
+            return myBuilder.getInt8('\0');
+        } else {
+            throw logic_error("[ERROR] char not defined: " + this->value);
+        }
+    }
+    return nullptr;
+}
+
+llvm::Value* NString::codeGen(CodeGenContext &context) {
+    cout << "StringNode : " << value <<endl;
+    string str = value.substr(1, value.length() - 2);
+    string after = string(1, '\n');
+    int pos = str.find("\\n");
+    while(pos != string::npos) {
+        str = str.replace(pos, 2, after);
+        pos = str.find("\\n");
+    }
+	cout << "StringNode : " << str <<endl;
+    llvm::Constant *strConst = llvm::ConstantDataArray::getString(MyContext, str);
+    
+    llvm::Value *globalVar = new llvm::GlobalVariable(*(context.module), strConst->getType(), true, llvm::GlobalValue::PrivateLinkage, strConst, "_Const_String_");
+    vector<llvm::Value*> indexList;
+    indexList.push_back(myBuilder.getInt32(0));
+    indexList.push_back(myBuilder.getInt32(0));
+    // var value
+    llvm::Value * varPtr = myBuilder.CreateInBoundsGEP(globalVar, makeArrayRef(indexList), "tmpstring");
+    return varPtr;
 }
