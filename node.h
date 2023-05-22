@@ -137,7 +137,7 @@ public:
     NBlock& ifBlock;
     NBlock* elseBlock; // 可选的else语句块，可以为NULL
 
-    NIfStatement(NExpression& condition, NBlock& ifBlock, NBlock* elseBlock = NULL)
+    NIfStatement(NExpression& condition, NBlock& ifBlock, NBlock* elseBlock = nullptr)
         : condition(condition), ifBlock(ifBlock), elseBlock(elseBlock) { }
 
     virtual llvm::Value* codeGen(CodeGenContext& context);

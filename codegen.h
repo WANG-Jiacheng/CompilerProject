@@ -34,8 +34,10 @@ public:
 };
 
 class CodeGenContext {
+public: 
     std::stack<CodeGenBlock *> blocks;
     Function *mainFunction;
+    Function* currentFunc;
 
 public:
 

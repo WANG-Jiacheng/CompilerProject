@@ -79,7 +79,7 @@ Value* NIdentifier::codeGen(CodeGenContext& context)
 	}
 
 	// return nullptr;  
-	return new LoadInst(context.locals()[name]->getType(),context.locals()[name], name, false, context.currentBlock());
+	return new LoadInst(context.locals()[name]->getType()->getPointerElementType(),context.locals()[name], name, false, context.currentBlock());
 }
 
 Value* NMethodCall::codeGen(CodeGenContext& context)
@@ -103,6 +103,8 @@ Value* NBinaryOperator::codeGen(CodeGenContext& context)
 
 	std::cout << "Creating binary operation " << op << endl;
 	Instruction::BinaryOps instr;
+	llvm::Value* left = lhs.codeGen(context);
+    llvm::Value* right = rhs.codeGen(context);
 	switch (op) {
 		case TPLUS: 	instr = Instruction::Add; goto math;
 		case TMINUS: 	instr = Instruction::Sub; goto math;
@@ -110,7 +112,14 @@ Value* NBinaryOperator::codeGen(CodeGenContext& context)
 		case TDIV: 		instr = Instruction::SDiv; goto math;
 				
 		/* TODO comparison */
+		case TCEQ:	return (left->getType() == llvm::Type::getFloatTy(MyContext)) ? myBuilder.CreateFCmpOEQ(left, right, "fcmptmp") : myBuilder.CreateICmpEQ(left, right, "icmptmp");
+		case TCNE: return (left->getType() == llvm::Type::getFloatTy(MyContext)) ? myBuilder.CreateFCmpONE(left, right, "fcmptmp") : myBuilder.CreateICmpNE(left, right, "icmptmp");
+		case TCLT: return (left->getType() == llvm::Type::getFloatTy(MyContext)) ? myBuilder.CreateFCmpOLT(left, right, "fcmptmp") : myBuilder.CreateICmpSLT(left, right, "icmptmp");
+		case TCLE: return (left->getType() == llvm::Type::getFloatTy(MyContext)) ? myBuilder.CreateFCmpOLE(left, right, "fcmptmp") : myBuilder.CreateICmpSLE(left, right, "icmptmp");
+		case TCGT: return (left->getType() == llvm::Type::getFloatTy(MyContext)) ? myBuilder.CreateFCmpOGT(left, right, "fcmptmp") : myBuilder.CreateICmpSGT(left, right, "icmptmp");
+		case TCGE: return (left->getType() == llvm::Type::getFloatTy(MyContext)) ? myBuilder.CreateFCmpOGE(left, right, "fcmptmp") : myBuilder.CreateICmpSGE(left, right, "icmptmp");
 	}
+
 	return NULL;
 math:
 	return BinaryOperator::Create(instr, lhs.codeGen(context), 
@@ -189,7 +198,7 @@ Value* NFunctionDeclaration::codeGen(CodeGenContext& context)
 	BasicBlock *bblock = BasicBlock::Create(MyContext, "entry", function, 0);
 
 	myBuilder.SetInsertPoint(bblock);
-	
+	context.currentFunc = function;
 	context.pushBlock(bblock);
 
 	Function::arg_iterator argsValues = function->arg_begin();
@@ -204,17 +213,48 @@ Value* NFunctionDeclaration::codeGen(CodeGenContext& context)
 	}
 	
 	block.codeGen(context);
-	ReturnInst::Create(MyContext, context.getCurrentReturnValue(), bblock);
+	ReturnInst::Create(MyContext, context.getCurrentReturnValue(), context.currentBlock());
 
 	context.popBlock();
-
+	context.currentFunc = nullptr;
 	myBuilder.SetInsertPoint(context.currentBlock());
 	std::cout << "Creating function: " << id.name << endl;
 	return function;
 }
 
 llvm::Value* NIfStatement::codeGen(CodeGenContext& context) {
+    llvm::Function *function = context.currentFunc;
+    
+    llvm::BasicBlock *IfBB = llvm::BasicBlock::Create(MyContext, "if", function);
+    llvm::BasicBlock *ElseBB = llvm::BasicBlock::Create(MyContext, "else", function);
+    llvm::BasicBlock *ThenBB = llvm::BasicBlock::Create(MyContext, "afterifelse", function);
 
+    llvm::Value *condValue = condition.codeGen(context), *thenValue = nullptr, *elseValue = nullptr;
+    condValue = myBuilder.CreateICmpNE(condValue, llvm::ConstantInt::get(llvm::Type::getInt1Ty(MyContext), 0, true), "ifCond");
+    auto branch = myBuilder.CreateCondBr(condValue, IfBB, ElseBB);
+
+    myBuilder.SetInsertPoint(IfBB);
+    // 将 if 的域放入栈顶
+    context.pushBlock(IfBB);
+    ifBlock.codeGen(context);
+    context.popBlock();
+
+    myBuilder.CreateBr(ThenBB);
+
+    myBuilder.SetInsertPoint(ElseBB);
+    // 将 else 的域放入栈顶
+    context.pushBlock(ElseBB);
+    elseBlock->codeGen(context);
+    context.popBlock();
+
+   
+    myBuilder.CreateBr(ThenBB);
+
+    myBuilder.SetInsertPoint(ThenBB);
+	context.popBlock(); 
+	context.pushBlock(ThenBB);
+	cout << "Generating code for if-else"<<endl; 
+    return branch;
 }
 
 llvm::Value* NChar::codeGen(CodeGenContext &context)
