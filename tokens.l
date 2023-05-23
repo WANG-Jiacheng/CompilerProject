@@ -45,6 +45,8 @@
 "/"				          		return TOKEN(TDIV);
 "%"                             return TOKEN(TMOD);
 
+"&"                             return TOKEN(TGETADDR);
+
 .                       printf("Unknown token!\n"); yyterminate();
 
 %%

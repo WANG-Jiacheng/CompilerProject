@@ -166,3 +166,10 @@ public:
   NExpression &condition;
   NBlock &block;
 };
+
+class NGetAddr : public NExpression {
+public:
+	NGetAddr(NIdentifier& id) : id(id) {}
+	virtual llvm::Value* codeGen(CodeGenContext& context);
+	NIdentifier& id;
+};

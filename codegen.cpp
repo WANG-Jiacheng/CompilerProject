@@ -352,3 +352,16 @@ llvm::Value*  NWhileStatement::codeGen(CodeGenContext &context){
     //GlobalAfterBB.pop();
     return branch;
 }
+
+llvm::Value* NGetAddr::codeGen(CodeGenContext& context){
+    cout << "getAddrNode : " << id.name << endl;
+    llvm::Value* result = nullptr;
+
+	if (context.locals().find(id.name) == context.locals().end()) {
+		std::cerr << "undeclared variable " << id.name << endl;
+		return nullptr;
+	}
+    else {
+		return (context.locals().find(id.name)->second);
+	}
+}
