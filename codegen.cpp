@@ -12,7 +12,7 @@ void CodeGenContext::generateCode(NBlock& root)
 	/* Create the top level interpreter function to call as entry */
 	vector<Type*> argTypes;
 	FunctionType *ftype = FunctionType::get(Type::getVoidTy(MyContext), makeArrayRef(argTypes), false);
-	mainFunction = Function::Create(ftype, GlobalValue::InternalLinkage, "main", module);
+	mainFunction = Function::Create(ftype, GlobalValue::ExternalLinkage, "main", module);
 	BasicBlock *bblock = BasicBlock::Create(MyContext, "entry", mainFunction, 0);
 	
 	/* Push a new variable/block context */
@@ -168,7 +168,7 @@ Value* NReturnStatement::codeGen(CodeGenContext& context)
 Value* NVariableDeclaration::codeGen(CodeGenContext& context)
 {
 	std::cout << "Creating variable declaration " << type.name << " " << id.name << endl;
-	AllocaInst *alloc = new AllocaInst(typeOf(type),4, id.name.c_str(), context.currentBlock());
+	AllocaInst *alloc = new AllocaInst(typeOf(type),8, id.name.c_str(), context.currentBlock());
 	context.locals()[id.name] = alloc;
 	if (assignmentExpr != NULL) {
 		NAssignment assn(id, *assignmentExpr);

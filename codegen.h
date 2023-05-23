@@ -33,11 +33,17 @@ public:
     //std::map<std::string, Value*> locals;
 };
 
+class CodeGenFunc {
+public:
+    Function* currentFunc;
+    std::map<std::string, Value*> FuncVars;
+};
+
 class CodeGenContext {
 public: 
     std::stack<CodeGenBlock *> blocks;
     Function *mainFunction;
-    std::stack<Function*> FuncStack;
+    std::stack<CodeGenFunc*> FuncStack;
     std::map<std::string, Value*> globals;
 
 public:
@@ -47,13 +53,13 @@ public:
     
     void generateCode(NBlock& root);
     GenericValue runCode();
-    std::map<std::string, Value*>& locals() { return globals; }
+    std::map<std::string, Value*>& locals() { return FuncStack.top()->FuncVars; }
     BasicBlock *currentBlock() { return blocks.top()->block; }
     void pushBlock(BasicBlock *block) { blocks.push(new CodeGenBlock()); blocks.top()->returnValue = NULL; blocks.top()->block = block; }
     void popBlock() { CodeGenBlock *top = blocks.top(); blocks.pop(); delete top; }
     void setCurrentReturnValue(Value *value) { blocks.top()->returnValue = value; }
     Value* getCurrentReturnValue() { return blocks.top()->returnValue; }
-    void pushFunc(Function* func) { FuncStack.push(func); }
+    void pushFunc(Function* func) { FuncStack.push(new CodeGenFunc()); FuncStack.top()->currentFunc = func;}
     void popFunc(){ FuncStack.pop(); }
-    Function* getCurrentFunc() { return FuncStack.top(); }
+    Function* getCurrentFunc() { return FuncStack.top()->currentFunc; }
 };

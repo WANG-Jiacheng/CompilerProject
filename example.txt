@@ -1,19 +1,15 @@
-extern void printi(int val)
-
-int do_math(int a) {
-  int i = 2
-  int isFlag = 1
-    while(i < a) {
-      if((a % i) == 0){
-        i=a+1
-        isFlag = 0
-      }
-      else{
-        i=i+1
-      }
-    }
-  return isFlag
+void move(int n, int a, int b, int c)
+{
+    if(n==1) {
+        printf("%d->%d\n",a,c)
+    } 
+    else
+    {   
+        move(n-1,a,c,b) 
+        printf("%d->%d\n",a,c) 
+        move(n-1,b,a,c) 
+    }   
 }
 
-int y = 17
-echo(do_math(y))
+int n = 3
+move(n,1,2,3)
