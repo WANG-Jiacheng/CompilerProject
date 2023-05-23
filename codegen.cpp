@@ -55,6 +55,9 @@ static Type *typeOf(const NIdentifier& type)
 	else if (type.name.compare("double") == 0) {
 		return Type::getDoubleTy(MyContext);
 	}
+	else if (type.name.compare("char") == 0) {
+		return Type::getInt8Ty(MyContext);
+	}
 	return Type::getVoidTy(MyContext);
 }
 
@@ -168,7 +171,7 @@ Value* NReturnStatement::codeGen(CodeGenContext& context)
 Value* NVariableDeclaration::codeGen(CodeGenContext& context)
 {
 	std::cout << "Creating variable declaration " << type.name << " " << id.name << endl;
-	AllocaInst *alloc = new AllocaInst(typeOf(type),8, id.name.c_str(), context.currentBlock());
+	AllocaInst *alloc = new AllocaInst(typeOf(type), 16, id.name.c_str(), context.currentBlock());
 	context.locals()[id.name] = alloc;
 	if (assignmentExpr != NULL) {
 		NAssignment assn(id, *assignmentExpr);

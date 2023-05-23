@@ -1,15 +1,15 @@
-void move(int n, int a, int b, int c)
+void move(int n, char a, char b, char c)
 {
     if(n==1) {
-        printf("%d->%d\n",a,c)
+        printf("%c->%c\n",a,c)
     } 
     else
     {   
-        move(n-1,a,c,b) 
-        printf("%d->%d\n",a,c) 
-        move(n-1,b,a,c) 
+        move(n-1, a, c, b) 
+        printf("%c->%c\n",a,c) 
+        move(n-1, b, a, c) 
     }   
 }
 
 int n = 3
-move(n,1,2,3)
+move(n,'a','b','c')
