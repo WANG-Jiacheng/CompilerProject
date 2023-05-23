@@ -1,24 +1,19 @@
 extern void printi(int val)
 
 int do_math(int a) {
-  int x = a * 5
-  if(2>3){
-    echo(1)
-  }
-  else{
-    echo(2)
-  }
-  return 5
+  int i = 2
+  int isFlag = 1
+    while(i < a) {
+      if((a % i) == 0){
+        i=a+1
+        isFlag = 0
+      }
+      else{
+        i=i+1
+      }
+    }
+  return isFlag
 }
 
-
-echo(do_math(11))
-echo(do_math(12))
-printi(10)
-printf("%d\n", do_math(11))
-if(2>1){
-    echo(1)
-  }
-  else{
-    echo(2)
-  }
+int y = 17
+echo(do_math(y))

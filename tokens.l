@@ -16,6 +16,7 @@
 "return"				        return TOKEN(TRETURN);
 "if"                            return TOKEN(TIF);
 "else"                          return TOKEN(TELSE);
+"while"                         return TOKEN(TWHILE);
 \'.\'|\'\\.\'                   SAVE_TOKEN; return TCHAR;
 \"(\\.|[^"\\])*\"               SAVE_TOKEN; return TSTRING;
 [a-zA-Z_][a-zA-Z0-9_]*  SAVE_TOKEN; return TIDENTIFIER;
@@ -42,6 +43,7 @@
 "-"		          				return TOKEN(TMINUS);
 "*"		          				return TOKEN(TMUL);
 "/"				          		return TOKEN(TDIV);
+"%"                             return TOKEN(TMOD);
 
 .                       printf("Unknown token!\n"); yyterminate();
 

@@ -30,7 +30,7 @@ class CodeGenBlock {
 public:
     BasicBlock *block;
     Value *returnValue;
-    std::map<std::string, Value*> locals;
+    //std::map<std::string, Value*> locals;
 };
 
 class CodeGenContext {
@@ -38,6 +38,7 @@ public:
     std::stack<CodeGenBlock *> blocks;
     Function *mainFunction;
     std::stack<Function*> FuncStack;
+    std::map<std::string, Value*> globals;
 
 public:
 
@@ -46,7 +47,7 @@ public:
     
     void generateCode(NBlock& root);
     GenericValue runCode();
-    std::map<std::string, Value*>& locals() { return blocks.top()->locals; }
+    std::map<std::string, Value*>& locals() { return globals; }
     BasicBlock *currentBlock() { return blocks.top()->block; }
     void pushBlock(BasicBlock *block) { blocks.push(new CodeGenBlock()); blocks.top()->returnValue = NULL; blocks.top()->block = block; }
     void popBlock() { CodeGenBlock *top = blocks.top(); blocks.pop(); delete top; }

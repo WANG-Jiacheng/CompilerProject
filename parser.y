@@ -22,6 +22,7 @@
 	int token;
 
 	NIfStatement* if_stmt;
+	NWhileStatement* while_stmt;
 }
 
 /* Define our terminal symbols (tokens). This should
@@ -31,8 +32,8 @@
 %token <string> TIDENTIFIER TINTEGER TDOUBLE TCHAR TSTRING
 %token <token> TCEQ TCNE TCLT TCLE TCGT TCGE TEQUAL
 %token <token> TLPAREN TRPAREN TLBRACE TRBRACE TCOMMA TDOT
-%token <token> TPLUS TMINUS TMUL TDIV
-%token <token> TRETURN TEXTERN TIF TELSE
+%token <token> TPLUS TMINUS TMUL TDIV TMOD
+%token <token> TRETURN TEXTERN TIF TELSE TWHILE
 
 /* Define the type of node our nonterminal symbols represent.
    The types refer to the %union declaration above. Ex: when
@@ -44,10 +45,11 @@
 %type <varvec> func_decl_args
 %type <exprvec> call_args
 %type <block> program stmts block
-%type <stmt> stmt var_decl func_decl extern_decl if_stmt
+%type <stmt> stmt var_decl func_decl extern_decl if_stmt while_stmt
 %type <token> comparison
 
 /* Operator precedence for mathematical operators */
+%left TMOD
 %left TPLUS TMINUS
 %left TMUL TDIV
 
@@ -62,7 +64,7 @@ stmts : stmt { $$ = new NBlock(); $$->statements.push_back($<stmt>1); }
 	  | stmts stmt { $1->statements.push_back($<stmt>2); }
 	  ;
 
-stmt : var_decl | func_decl | extern_decl | if_stmt
+stmt : var_decl | func_decl | extern_decl | if_stmt | while_stmt
 	 | expr { $$ = new NExpressionStatement(*$1); }
 	 | TRETURN expr { $$ = new NReturnStatement(*$2); }
      ;
@@ -105,6 +107,7 @@ expr : ident TEQUAL expr { $$ = new NAssignment(*$<ident>1, *$3); }
          | expr TDIV expr { $$ = new NBinaryOperator(*$1, $2, *$3); }
          | expr TPLUS expr { $$ = new NBinaryOperator(*$1, $2, *$3); }
          | expr TMINUS expr { $$ = new NBinaryOperator(*$1, $2, *$3); }
+		 | expr TMOD expr { $$ = new NBinaryOperator(*$1, $2, *$3); }
  	 | expr comparison expr { $$ = new NBinaryOperator(*$1, $2, *$3); }
      | TLPAREN expr TRPAREN { $$ = $2; }
 	 ;
@@ -119,5 +122,8 @@ comparison : TCEQ | TCNE | TCLT | TCLE | TCGT | TCGE;
 if_stmt : TIF TLPAREN expr TRPAREN block { $$ = new NIfStatement(*$3, *$5); }
         | TIF TLPAREN expr TRPAREN block TELSE block { $$ = new NIfStatement(*$3, *$5, $7); }
 		;
+
+while_stmt : TWHILE TLPAREN expr TRPAREN block { $$ = new NWhileStatement(*$3, *$5); }
+		   ;
 
 %%

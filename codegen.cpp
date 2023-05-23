@@ -112,6 +112,7 @@ Value* NBinaryOperator::codeGen(CodeGenContext& context)
 		case TMINUS: 	instr = Instruction::Sub; goto math;
 		case TMUL: 		instr = Instruction::Mul; goto math;
 		case TDIV: 		instr = Instruction::SDiv; goto math;
+		case TMOD:		instr = Instruction::SRem; goto math;
 				
 		/* TODO comparison */
 		case TCEQ:	return (left->getType() == llvm::Type::getFloatTy(MyContext)) ? myBuilder.CreateFCmpOEQ(left, right, "fcmptmp") : myBuilder.CreateICmpEQ(left, right, "icmptmp");
@@ -311,4 +312,40 @@ llvm::Value* NString::codeGen(CodeGenContext &context) {
     // var value
     llvm::Value * varPtr = myBuilder.CreateInBoundsGEP(globalVar, makeArrayRef(indexList), "tmpstring");
     return varPtr;
+}
+
+llvm::Value*  NWhileStatement::codeGen(CodeGenContext &context){
+    cout << "Generating code for while "<<endl;
+
+    llvm::Function *TheFunction = context.getCurrentFunc();
+
+    llvm::BasicBlock *condBB = llvm::BasicBlock::Create(MyContext, "cond", TheFunction);
+    llvm::BasicBlock *loopBB = llvm::BasicBlock::Create(MyContext, "loop", TheFunction);
+    llvm::BasicBlock *afterBB = llvm::BasicBlock::Create(MyContext, "afterLoop", TheFunction);
+
+    //GlobalAfterBB.push(afterBB);
+
+    myBuilder.CreateBr(condBB);
+    myBuilder.SetInsertPoint(condBB);
+	context.pushBlock(condBB);
+    llvm::Value *condValue = condition.codeGen(context);
+    condValue = myBuilder.CreateICmpNE(condValue, llvm::ConstantInt::get(llvm::Type::getInt1Ty(MyContext), 0, true), "whileCond");
+    auto branch = myBuilder.CreateCondBr(condValue, loopBB, afterBB);
+    //condBB = myBuilder.GetInsertBlock();
+	context.popBlock();
+
+    myBuilder.SetInsertPoint(loopBB);
+
+    // 将 while 的域放入栈顶
+    context.pushBlock(loopBB);
+    block.codeGen(context);
+    myBuilder.CreateBr(condBB);
+
+    // while 结束, 将 while 的域弹出栈顶
+    context.popBlock();
+    myBuilder.SetInsertPoint(afterBB);
+	context.popBlock();
+	context.pushBlock(afterBB);
+    //GlobalAfterBB.pop();
+    return branch;
 }

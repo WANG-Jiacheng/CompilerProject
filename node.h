@@ -156,3 +156,13 @@ public:
   virtual llvm::Value *codeGen(CodeGenContext &context);
   std::string value;
 };
+
+class NWhileStatement : public NStatement {
+public:
+  NWhileStatement(NExpression &condition, NBlock &block)
+    : condition(condition), block(block) {}
+  virtual llvm::Value* codeGen(CodeGenContext &context);
+public:
+  NExpression &condition;
+  NBlock &block;
+};
