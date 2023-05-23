@@ -37,7 +37,7 @@ class CodeGenContext {
 public: 
     std::stack<CodeGenBlock *> blocks;
     Function *mainFunction;
-    Function* currentFunc;
+    std::stack<Function*> FuncStack;
 
 public:
 
@@ -52,4 +52,7 @@ public:
     void popBlock() { CodeGenBlock *top = blocks.top(); blocks.pop(); delete top; }
     void setCurrentReturnValue(Value *value) { blocks.top()->returnValue = value; }
     Value* getCurrentReturnValue() { return blocks.top()->returnValue; }
+    void pushFunc(Function* func) { FuncStack.push(func); }
+    void popFunc(){ FuncStack.pop(); }
+    Function* getCurrentFunc() { return FuncStack.top(); }
 };

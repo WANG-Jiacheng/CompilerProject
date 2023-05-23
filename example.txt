@@ -2,11 +2,11 @@ extern void printi(int val)
 
 int do_math(int a) {
   int x = a * 5
-  if(3 > 2) {
-    echo(3)
+  if(2>3){
+    echo(1)
   }
   else{
-
+    echo(2)
   }
   return 5
 }
@@ -16,3 +16,9 @@ echo(do_math(11))
 echo(do_math(12))
 printi(10)
 printf("%d\n", do_math(11))
+if(2>1){
+    echo(1)
+  }
+  else{
+    echo(2)
+  }

@@ -16,9 +16,11 @@ void CodeGenContext::generateCode(NBlock& root)
 	BasicBlock *bblock = BasicBlock::Create(MyContext, "entry", mainFunction, 0);
 	
 	/* Push a new variable/block context */
+	pushFunc(mainFunction);
 	pushBlock(bblock);
 	root.codeGen(*this); /* emit bytecode for the toplevel block */
-	ReturnInst::Create(MyContext, bblock);
+	ReturnInst::Create(MyContext, currentBlock());
+	popFunc();
 	popBlock();
 	
 	/* Print the bytecode in a human-readable format 
@@ -198,7 +200,7 @@ Value* NFunctionDeclaration::codeGen(CodeGenContext& context)
 	BasicBlock *bblock = BasicBlock::Create(MyContext, "entry", function, 0);
 
 	myBuilder.SetInsertPoint(bblock);
-	context.currentFunc = function;
+	context.pushFunc(function);
 	context.pushBlock(bblock);
 
 	Function::arg_iterator argsValues = function->arg_begin();
@@ -216,14 +218,14 @@ Value* NFunctionDeclaration::codeGen(CodeGenContext& context)
 	ReturnInst::Create(MyContext, context.getCurrentReturnValue(), context.currentBlock());
 
 	context.popBlock();
-	context.currentFunc = nullptr;
+	context.popFunc();
 	myBuilder.SetInsertPoint(context.currentBlock());
 	std::cout << "Creating function: " << id.name << endl;
 	return function;
 }
 
 llvm::Value* NIfStatement::codeGen(CodeGenContext& context) {
-    llvm::Function *function = context.currentFunc;
+    llvm::Function *function = context.getCurrentFunc();
     
     llvm::BasicBlock *IfBB = llvm::BasicBlock::Create(MyContext, "if", function);
     llvm::BasicBlock *ElseBB = llvm::BasicBlock::Create(MyContext, "else", function);
