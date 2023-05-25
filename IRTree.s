@@ -31,11 +31,12 @@ main:                                   # @main
 	xorl	%eax, %eax
 	callq	scanf@PLT
 	movq	(%rsp), %rdi
-	movl	$97, %esi
-	movl	$98, %edx
-	movl	$99, %ecx
+	movl	$65, %esi
+	movl	$66, %edx
+	movl	$67, %ecx
 	callq	move
-	popq	%rax
+	xorl	%eax, %eax
+	popq	%rcx
 	.cfi_def_cfa_offset 8
 	retq
 .Lfunc_end1:

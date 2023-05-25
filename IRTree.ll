@@ -16,13 +16,13 @@ entry:
   ret void
 }
 
-define void @main() {
+define i64 @main() {
 entry:
   %n = alloca i64, align 8, addrspace(16)
   %0 = call i32 (i8*, ...) @scanf(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @_Const_String_.2, i32 0, i32 0), i64 addrspace(16)* %n)
   %n1 = load i64, i64 addrspace(16)* %n, align 4
-  call void @move(i64 %n1, i8 97, i8 98, i8 99)
-  ret void
+  call void @move(i64 %n1, i8 65, i8 66, i8 67)
+  ret i64 0
 }
 
 define internal void @move(i64 %n1, i8 %a2, i8 %b3, i8 %c4) {

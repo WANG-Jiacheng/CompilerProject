@@ -11,7 +11,7 @@ void CodeGenContext::generateCode(NBlock& root)
 	
 	/* Create the top level interpreter function to call as entry */
 	vector<Type*> argTypes;
-	FunctionType *ftype = FunctionType::get(Type::getVoidTy(MyContext), makeArrayRef(argTypes), false);
+	FunctionType *ftype = FunctionType::get(Type::getInt64Ty(MyContext), makeArrayRef(argTypes), false);
 	mainFunction = Function::Create(ftype, GlobalValue::ExternalLinkage, "main", module);
 	BasicBlock *bblock = BasicBlock::Create(MyContext, "entry", mainFunction, 0);
 	
@@ -19,7 +19,7 @@ void CodeGenContext::generateCode(NBlock& root)
 	pushFunc(mainFunction);
 	pushBlock(bblock);
 	root.codeGen(*this); /* emit bytecode for the toplevel block */
-	ReturnInst::Create(MyContext, currentBlock());
+	ReturnInst::Create(MyContext, getCurrentReturnValue(), currentBlock());
 	popFunc();
 	popBlock();
 	
@@ -31,7 +31,9 @@ void CodeGenContext::generateCode(NBlock& root)
 
 	legacy::PassManager pm;
 	// TODO:
-	pm.add(createPrintModulePass(outs()));
+	std::error_code e;
+	llvm::raw_fd_ostream output("IRTree.ll", e);
+	pm.add(createPrintModulePass(output));
 	pm.run(*module);
 }
 
@@ -273,12 +275,6 @@ llvm::Value* NChar::codeGen(CodeGenContext &context)
             return myBuilder.getInt8('\n');
         } else if (this->value.compare("'\\\\'") == 0){
             return myBuilder.getInt8('\\');
-        } else if (this->value.compare("'\\a'") == 0){
-            return myBuilder.getInt8('\a');
-        } else if (this->value.compare("'\\b'") == 0){
-            return myBuilder.getInt8('\b');
-        } else if (this->value.compare("'\\f'") == 0){
-            return myBuilder.getInt8('\f');
         } else if (this->value.compare("'\\t'") == 0){
             return myBuilder.getInt8('\t');
         } else if (this->value.compare("'\\v'") == 0){
