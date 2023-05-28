@@ -11,7 +11,7 @@ void CodeGenContext::generateCode(NBlock& root)
 	
 	/* Create the top level interpreter function to call as entry */
 	vector<Type*> argTypes;
-	FunctionType *ftype = FunctionType::get(Type::getInt64Ty(MyContext), makeArrayRef(argTypes), false);
+	FunctionType *ftype = FunctionType::get(Type::getInt32Ty(MyContext), makeArrayRef(argTypes), false);
 	mainFunction = Function::Create(ftype, GlobalValue::ExternalLinkage, "main", module);
 	BasicBlock *bblock = BasicBlock::Create(MyContext, "entry", mainFunction, 0);
 	
@@ -49,10 +49,10 @@ GenericValue CodeGenContext::runCode() {
 }
 
 /* Returns an LLVM type based on the identifier */
-static Type *typeOf(const NIdentifier& type) 
+llvm::Type *typeOf(const NIdentifier& type) 
 {
 	if (type.name.compare("int") == 0) {
-		return Type::getInt64Ty(MyContext);
+		return Type::getInt32Ty(MyContext);
 	}
 	else if (type.name.compare("double") == 0) {
 		return Type::getDoubleTy(MyContext);
@@ -63,12 +63,55 @@ static Type *typeOf(const NIdentifier& type)
 	return Type::getVoidTy(MyContext);
 }
 
+llvm::Type *typeOf(const NIdentifier& type, int size) {
+	if(type.name.compare("int") == 0) {
+		return llvm::ArrayType::get(llvm::Type::getInt32Ty(MyContext), size);
+	}
+	else if(type.name.compare("double") == 0) {
+		return llvm::ArrayType::get(llvm::Type::getDoubleTy(MyContext), size);
+	}
+	else if(type.name.compare("char") == 0) {
+		return llvm::ArrayType::get(llvm::Type::getInt8Ty(MyContext), size);
+	}
+	return Type::getVoidTy(MyContext);
+}
+
+llvm::Instruction::CastOps getCastInst(llvm::Type* src, llvm::Type* dst) {
+    if (src == llvm::Type::getDoubleTy(MyContext) && dst == llvm::Type::getInt32Ty(MyContext)) { //llvm下float到int
+        return llvm::Instruction::FPToSI;  
+    }
+    else if (src == llvm::Type::getInt32Ty(MyContext) && dst == llvm::Type::getDoubleTy(MyContext)) { //llvm下int到float
+        return llvm::Instruction::SIToFP;
+    }
+    else if (src == llvm::Type::getInt8Ty(MyContext) && dst == llvm::Type::getDoubleTy(MyContext)) {
+        return llvm::Instruction::UIToFP;
+    }
+    else if (src == llvm::Type::getInt8Ty(MyContext) && dst == llvm::Type::getInt32Ty(MyContext)) {
+        return llvm::Instruction::ZExt;
+    }
+    else if (src == llvm::Type::getInt32Ty(MyContext) && dst == llvm::Type::getInt8Ty(MyContext)) {
+        return llvm::Instruction::Trunc;
+    }
+    else {
+        throw logic_error("[ERROR] Wrong typecast");
+    }
+}
+
+llvm::Value* typeCast(llvm::Value* src, llvm::Type* dst) {
+    llvm::Instruction::CastOps op = getCastInst(src->getType(), dst);
+    return myBuilder.CreateCast(op, src, dst, "tmptypecast");
+}
+
+
+
+
+
 /* -- Code Generation -- */
 
 Value* NInteger::codeGen(CodeGenContext& context)
 {
 	std::cout << "Creating integer: " << value << endl;
-	return ConstantInt::get(Type::getInt64Ty(MyContext), value, true);
+	return ConstantInt::get(Type::getInt32Ty(MyContext), value, true);
 }
 
 Value* NDouble::codeGen(CodeGenContext& context)
@@ -84,9 +127,18 @@ Value* NIdentifier::codeGen(CodeGenContext& context)
 		std::cerr << "undeclared variable " << name << endl;
 		return NULL;
 	}
-
-	// return nullptr;  
-	return new LoadInst(context.locals()[name]->getType()->getPointerElementType(),context.locals()[name], name, false, context.currentBlock());
+	else {
+		llvm::Type* idType = (context.locals().find(name)->second)->getType()->getPointerElementType();
+		if(idType->isArrayTy()) {
+			vector<llvm::Value*> indexList;
+        	indexList.push_back(myBuilder.getInt32(0));
+        	indexList.push_back(myBuilder.getInt32(0));
+        	return myBuilder.CreateInBoundsGEP(context.locals().find(name)->second, indexList, "arrayPtr");
+		}
+		else {
+			return new LoadInst(context.locals()[name]->getType()->getPointerElementType(),context.locals()[name], name, false, context.currentBlock());
+		}
+	}
 }
 
 Value* NMethodCall::codeGen(CodeGenContext& context)
@@ -120,12 +172,15 @@ Value* NBinaryOperator::codeGen(CodeGenContext& context)
 		case TMOD:		instr = Instruction::SRem; goto math;
 				
 		/* TODO comparison */
-		case TCEQ:	return (left->getType() == llvm::Type::getFloatTy(MyContext)) ? myBuilder.CreateFCmpOEQ(left, right, "fcmptmp") : myBuilder.CreateICmpEQ(left, right, "icmptmp");
-		case TCNE: return (left->getType() == llvm::Type::getFloatTy(MyContext)) ? myBuilder.CreateFCmpONE(left, right, "fcmptmp") : myBuilder.CreateICmpNE(left, right, "icmptmp");
-		case TCLT: return (left->getType() == llvm::Type::getFloatTy(MyContext)) ? myBuilder.CreateFCmpOLT(left, right, "fcmptmp") : myBuilder.CreateICmpSLT(left, right, "icmptmp");
-		case TCLE: return (left->getType() == llvm::Type::getFloatTy(MyContext)) ? myBuilder.CreateFCmpOLE(left, right, "fcmptmp") : myBuilder.CreateICmpSLE(left, right, "icmptmp");
-		case TCGT: return (left->getType() == llvm::Type::getFloatTy(MyContext)) ? myBuilder.CreateFCmpOGT(left, right, "fcmptmp") : myBuilder.CreateICmpSGT(left, right, "icmptmp");
-		case TCGE: return (left->getType() == llvm::Type::getFloatTy(MyContext)) ? myBuilder.CreateFCmpOGE(left, right, "fcmptmp") : myBuilder.CreateICmpSGE(left, right, "icmptmp");
+		case TCEQ:	return (left->getType() == llvm::Type::getDoubleTy(MyContext)) ? myBuilder.CreateFCmpOEQ(left, right, "fcmptmp") : myBuilder.CreateICmpEQ(left, right, "icmptmp");
+		case TCNE: return (left->getType() == llvm::Type::getDoubleTy(MyContext)) ? myBuilder.CreateFCmpONE(left, right, "fcmptmp") : myBuilder.CreateICmpNE(left, right, "icmptmp");
+		case TCLT: return (left->getType() == llvm::Type::getDoubleTy(MyContext)) ? myBuilder.CreateFCmpOLT(left, right, "fcmptmp") : myBuilder.CreateICmpSLT(left, right, "icmptmp");
+		case TCLE: return (left->getType() == llvm::Type::getDoubleTy(MyContext)) ? myBuilder.CreateFCmpOLE(left, right, "fcmptmp") : myBuilder.CreateICmpSLE(left, right, "icmptmp");
+		case TCGT: return (left->getType() == llvm::Type::getDoubleTy(MyContext)) ? myBuilder.CreateFCmpOGT(left, right, "fcmptmp") : myBuilder.CreateICmpSGT(left, right, "icmptmp");
+		case TCGE: return (left->getType() == llvm::Type::getDoubleTy(MyContext)) ? myBuilder.CreateFCmpOGE(left, right, "fcmptmp") : myBuilder.CreateICmpSGE(left, right, "icmptmp");
+
+		case TAND: return myBuilder.CreateAnd(left, right, "tmpAnd");
+		case TOR: return myBuilder.CreateOr(left, right, "tmpOR");
 	}
 
 	return NULL;
@@ -141,7 +196,11 @@ Value* NAssignment::codeGen(CodeGenContext& context)
 		std::cerr << "undeclared variable " << lhs.name << endl;
 		return NULL;
 	}
-	return new StoreInst(rhs.codeGen(context), context.locals()[lhs.name], false, context.currentBlock());
+	llvm::Value* expr = rhs.codeGen(context);
+	if (expr->getType() != context.locals().find(lhs.name)->second->getType()->getPointerElementType()){
+		expr = typeCast(expr, context.locals().find(lhs.name)->second->getType()->getPointerElementType());
+	}
+	return new StoreInst(expr, context.locals()[lhs.name], false, context.currentBlock());
 }
 
 Value* NBlock::codeGen(CodeGenContext& context)
@@ -173,13 +232,20 @@ Value* NReturnStatement::codeGen(CodeGenContext& context)
 Value* NVariableDeclaration::codeGen(CodeGenContext& context)
 {
 	std::cout << "Creating variable declaration " << type.name << " " << id.name << endl;
-	AllocaInst *alloc = new AllocaInst(typeOf(type), 16, id.name.c_str(), context.currentBlock());
-	context.locals()[id.name] = alloc;
-	if (assignmentExpr != NULL) {
-		NAssignment assn(id, *assignmentExpr);
-		assn.codeGen(context);
+	if(size == 0) {
+		AllocaInst *alloc = new AllocaInst(typeOf(type), context.currentBlock()->getParent()->getParent()->getDataLayout().getAllocaAddrSpace(), id.name.c_str(), context.currentBlock());
+		context.locals()[id.name] = alloc;
+		if (assignmentExpr != NULL) {
+			NAssignment assn(id, *assignmentExpr);
+			assn.codeGen(context);
+		}
+		return alloc;
 	}
-	return alloc;
+	else {
+		AllocaInst *alloc = new AllocaInst(typeOf(type, size), context.currentBlock()->getParent()->getParent()->getDataLayout().getAllocaAddrSpace(), id.name.c_str(), context.currentBlock());
+		context.locals()[id.name] = alloc;
+		return alloc;
+	}
 }
 
 Value* NExternDeclaration::codeGen(CodeGenContext& context)
@@ -349,9 +415,8 @@ llvm::Value*  NWhileStatement::codeGen(CodeGenContext &context){
     return branch;
 }
 
-llvm::Value* NGetAddr::codeGen(CodeGenContext& context){
+llvm::Value* NGetAddr::codeGen(CodeGenContext& context) {
     cout << "getAddrNode : " << id.name << endl;
-    llvm::Value* result = nullptr;
 
 	if (context.locals().find(id.name) == context.locals().end()) {
 		std::cerr << "undeclared variable " << id.name << endl;
@@ -359,5 +424,38 @@ llvm::Value* NGetAddr::codeGen(CodeGenContext& context){
 	}
     else {
 		return (context.locals().find(id.name)->second);
+	}
+}
+
+llvm::Value* NArrayElement::codeGen(CodeGenContext& context) {
+	cout << "Get Array: " << id.name << "[]" <<  endl;
+	if(context.locals().find(id.name) == context.locals().end()) {
+		cout << "undeclared variable" << id.name << "[]" << endl;
+		return nullptr;
+	}
+	else {
+		llvm::Value* arrayPtr = context.locals().find(id.name)->second;
+		vector<llvm::Value*> indexList;
+		indexList.push_back(myBuilder.getInt32(0));
+		indexList.push_back(index.codeGen(context));
+		llvm::Value* elePtr = myBuilder.CreateInBoundsGEP(arrayPtr, llvm::ArrayRef<llvm::Value*>(indexList), "__Placeholder_of_a_element_in_array__");
+		return new LoadInst(elePtr->getType()->getPointerElementType(), elePtr, "__Placeholder_for_array_load__", false, context.currentBlock());
+	}
+}
+
+llvm::Value* NArrayElementAssign::codeGen(CodeGenContext& context) {
+	cout << "Assign an element of array " << id.name << "[]" << endl;
+	if(context.locals().find(id.name) == context.locals().end()) {
+		cout << "undeclared variable" << id.name << "[]" << endl;
+		return nullptr;
+	} 
+	else {
+		llvm::Value* arrayPtr = context.locals().find(id.name)->second;
+		vector<llvm::Value*> indexList;
+		indexList.push_back(myBuilder.getInt32(0));
+		indexList.push_back(index.codeGen(context));
+		llvm::Value* elePtr = myBuilder.CreateInBoundsGEP(arrayPtr, llvm::ArrayRef<llvm::Value*>(indexList), "__Placeholder_of_a_element_in_array__");
+		llvm::Value* expr = rhs.codeGen(context);
+		return new StoreInst(expr, elePtr, false, context.currentBlock());
 	}
 }

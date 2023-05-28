@@ -1,17 +1,79 @@
-void move(int n,char a,char b,char c)
-{
-    if(n==1) {
-        printf("%c->%c\n",a,c)
-    } 
-    else
-    {   
-        move(n-1,a,c,b) 
-        printf("%c->%c\n",a,c) 
-        move(n-1,b,a,c) 
-    }   
+void test() {}
+
+
+char s[100]
+scanf("%s", s)
+
+int len = 0
+
+while(s[len] != '\0') {
+    len = len + 1
 }
 
-int n
-scanf("%d", &n)
-move(n,'A','B','C')
+int numsStack[100]
+char signStack[100]
+
+int nums_top = (0-1)
+int sign_top = (0-1)
+
+int i = 0
+
+int nums = 0
+int tmp = 0
+int top = 0
+
+while(i < len) {
+    if((s[i] == '+') || (s[i] == '-') || (s[i] == '*') || (s[i] == '/')) {
+        sign_top = sign_top + 1
+        signStack[sign_top] = s[i]
+        i = i + 1    
+    }
+    else {
+        nums = 0
+        tmp = 0
+        while((i < len) && (s[i] >= '0') && (s[i] <= '9')) {
+            tmp = s[i] - '0'
+            nums = nums * 10 + tmp
+            i = i + 1
+        }
+        if(((sign_top >= 0) && (signStack[sign_top] == '*')) || (signStack[sign_top] == '/')) {
+            top = numsStack[nums_top]
+            nums_top = nums_top - 1
+            if (signStack[sign_top] == '*') {
+                nums = top * nums
+            }
+            else {
+                nums = top / nums
+            }
+
+            sign_top = sign_top - 1
+        }
+        else {
+
+        }
+        nums_top = nums_top + 1
+        numsStack[nums_top] = nums
+    }
+}
+
+int ret
+int pos = 0
+int k = 0
+
+while(k <= sign_top) {
+    ret = numsStack[pos]
+    pos = pos + 1
+
+    if(signStack[k] == '+') {
+        numsStack[pos] = numsStack[pos] + ret
+    }
+    else {
+        numsStack[pos] = ret - numsStack[pos]
+    }
+
+    k = k + 1
+}
+
+printf("%d\n", numsStack[pos])
+
 return 0

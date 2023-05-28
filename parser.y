@@ -32,8 +32,8 @@
 %token <string> TIDENTIFIER TINTEGER TDOUBLE TCHAR TSTRING
 %token <token> TGETADDR
 %token <token> TCEQ TCNE TCLT TCLE TCGT TCGE TEQUAL
-%token <token> TLPAREN TRPAREN TLBRACE TRBRACE TCOMMA TDOT
-%token <token> TPLUS TMINUS TMUL TDIV TMOD
+%token <token> TLPAREN TRPAREN TLBRACE TRBRACE TCOMMA TDOT TLBRACKET TRBRACKET
+%token <token> TPLUS TMINUS TMUL TDIV TMOD TAND TOR
 %token <token> TRETURN TEXTERN TIF TELSE TWHILE
 
 /* Define the type of node our nonterminal symbols represent.
@@ -50,6 +50,8 @@
 %type <token> comparison
 
 /* Operator precedence for mathematical operators */
+%left TOR
+%left TAND
 %left TMOD
 %left TPLUS TMINUS
 %left TMUL TDIV
@@ -76,6 +78,7 @@ block : TLBRACE stmts TRBRACE { $$ = $2; }
 
 var_decl : ident ident { $$ = new NVariableDeclaration(*$1, *$2); }
 		 | ident ident TEQUAL expr { $$ = new NVariableDeclaration(*$1, *$2, $4); }
+		 | ident ident TLBRACKET TINTEGER TRBRACKET { $$ = new NVariableDeclaration(*$1, *$2, atol($4->c_str())); }
 		 ;
 
 extern_decl : TEXTERN ident ident TLPAREN func_decl_args TRPAREN
@@ -109,8 +112,12 @@ expr : ident TEQUAL expr { $$ = new NAssignment(*$<ident>1, *$3); }
          | expr TPLUS expr { $$ = new NBinaryOperator(*$1, $2, *$3); }
          | expr TMINUS expr { $$ = new NBinaryOperator(*$1, $2, *$3); }
 		 | expr TMOD expr { $$ = new NBinaryOperator(*$1, $2, *$3); }
+		 | expr TAND expr { $$ = new NBinaryOperator(*$1, $2, *$3); }
+		 | expr TOR expr { $$ = new NBinaryOperator(*$1, $2, *$3); }
  	 | expr comparison expr { $$ = new NBinaryOperator(*$1, $2, *$3); }
 	 | TGETADDR ident { $$ = new NGetAddr(*$2); }
+	 | ident TLBRACKET expr TRBRACKET { $$ = new NArrayElement(*$1, *$3); }
+	 | ident TLBRACKET expr TRBRACKET TEQUAL expr { $$ = new NArrayElementAssign(*$1, *$3, *$6); }
      | TLPAREN expr TRPAREN { $$ = $2; }
 	 ;
 	

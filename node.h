@@ -101,10 +101,13 @@ public:
 	const NIdentifier& type;
 	NIdentifier& id;
 	NExpression *assignmentExpr;
+	int size = 0;
 	NVariableDeclaration(const NIdentifier& type, NIdentifier& id) :
 		type(type), id(id) { assignmentExpr = NULL; }
 	NVariableDeclaration(const NIdentifier& type, NIdentifier& id, NExpression *assignmentExpr) :
 		type(type), id(id), assignmentExpr(assignmentExpr) { }
+	NVariableDeclaration(const NIdentifier& type, NIdentifier& id, int size) : 
+		type(type), id(id), size(size) { assignmentExpr = NULL; }
 	virtual llvm::Value* codeGen(CodeGenContext& context);
 };
 
@@ -172,4 +175,23 @@ public:
 	NGetAddr(NIdentifier& id) : id(id) {}
 	virtual llvm::Value* codeGen(CodeGenContext& context);
 	NIdentifier& id;
+};
+
+class NArrayElement : public NExpression {
+public:
+	NIdentifier& id;
+	NExpression& index;
+	NArrayElement(NIdentifier& id, NExpression& index) : 
+		id(id), index(index) {}
+	virtual llvm::Value* codeGen(CodeGenContext& context);
+};
+
+class NArrayElementAssign : public NExpression {
+public: 
+	NIdentifier& id;
+	NExpression& index;
+	NExpression& rhs;
+	NArrayElementAssign(NIdentifier& id, NExpression& index, NExpression& rhs) : 
+		id(id), index(index), rhs(rhs) {}
+	virtual llvm::Value* codeGen(CodeGenContext& context);	
 };

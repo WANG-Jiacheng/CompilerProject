@@ -47,6 +47,12 @@
 
 "&"                             return TOKEN(TGETADDR);
 
+"["                             return TOKEN(TLBRACKET);
+"]"                             return TOKEN(TRBRACKET); 
+
+"&&"                            return TOKEN(TAND);
+"||"                            return TOKEN(TOR);
+
 .                       printf("Unknown token!\n"); yyterminate();
 
 %%
